@@ -1,14 +1,16 @@
 package com.myapp.catching.model;
 
 import javax.persistence.*;
-import java.math.BigDecimal;
+import java.io.Serializable;
 
 @Entity
-public class EngineObject {
+public class EngineObject implements Serializable {
+
+    private static final long serialVersionUID = -1L;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private BigDecimal id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     private String className;
 
@@ -30,6 +32,9 @@ public class EngineObject {
 
     }
 
+    public Long getId() {
+        return id;
+    }
 
     public String getClassName() {
         return className;
