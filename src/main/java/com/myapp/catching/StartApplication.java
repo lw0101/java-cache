@@ -20,6 +20,7 @@ import javax.management.JMX;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
+import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.util.Set;
@@ -45,46 +46,69 @@ public class StartApplication implements CommandLineRunner {
     public static void main(String[] args) {
         SpringApplication.run(StartApplication.class, args);
     }
-
+    public static final Long maxObjects = 1000000L;
     @Override
     public void run(String... args) {
 
-        logger.info("StartApplication Caching Example ...");
-        logger.info("using cache manager: " + cacheManager.getClass().getName());
+        logger.info("## StartApplication Caching Example ...");
+        logger.info("## using cache manager: " + cacheManager.getClass().getName());
 
 //        populateTestDB();
 
-//        engineObjectService.clearCache();
+        engineObjectService.clearCache();
+        logger.info("## Initial memory KB: " + getReallyUsedMemory() / 1024d);
 
         long startTime, stopTime;
         startTime = System.nanoTime();
         List<EngineObject> engineObjects = engineObjectService.findAll();
         stopTime = System.nanoTime();
-        logger.info("\nfindAll from DB(): " + (stopTime - startTime) + " ns" );
+
+        logger.info("## findAll from DB(): {} s. Memory KB {} ",
+                (stopTime - startTime) * 0.000000001f,
+                getReallyUsedMemory() / 1024d );
+
+        Long count = maxObjects;
+        engineObjects = engineObjects.subList(0, count.intValue());
 
         startTime = System.nanoTime();
-        // engineObjectService.findAll();
+        engineObjects.parallelStream().forEach((x) -> {
+            cacheManager.getCache("EngineObjectService").put(x.getId(),x);
+        });
         stopTime = System.nanoTime();
-        logger.info("\nfindAll from cache(): " + (stopTime - startTime) + " ns" );
 
-        Long count = 100L;
+        logger.info("## Loading objects in cache(): {} s. Memory KB {} ",
+                (stopTime - startTime) * 0.000000001f,
+                getReallyUsedMemory() / 1024d );
 
+//        count = 100000L;
+//        for (EngineObject eo : engineObjects) {
+//            engineObjectService.findById(eo.getId());
+//            --count;
+//            if (count == 0L) break;
+//        }
+
+
+        count = maxObjects;
+        startTime = System.nanoTime();
         for (EngineObject eo : engineObjects) {
             engineObjectService.findById(eo.getId());
             --count;
             if (count == 0L) break;
         }
+        stopTime = System.nanoTime();
 
+        logger.info("## Loop 1: {} s. Memory KB {} ",
+                (stopTime - startTime) * 0.000000001f,
+                getReallyUsedMemory() / 1024d );
 
-        count = 50L;
         startTime = System.nanoTime();
         for (EngineObject eo : engineObjects) {
             engineObjectService.findById(eo.getId());
-            --count;
-            if (count == 0L) break;
         }
         stopTime = System.nanoTime();
-        logger.info("\nloop: " + (stopTime - startTime) + " ns" );
+        logger.info("## Loop 2: {} s. Memory KB {} ",
+                (stopTime - startTime) * 0.000000001f,
+                getReallyUsedMemory() / 1024d );
 
         printStats();
 //        System.out.println("\nfindById(1L)");
@@ -110,6 +134,26 @@ public class StartApplication implements CommandLineRunner {
         }
     }
 
+
+    long getCurrentlyUsedMemory() {
+        return
+                ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() +
+                        ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage().getUsed();
+    }
+    long getGcCount() {
+        long sum = 0;
+        for (GarbageCollectorMXBean b : ManagementFactory.getGarbageCollectorMXBeans()) {
+            long count = b.getCollectionCount();
+            if (count != -1) { sum +=  count; }
+        }
+        return sum;
+    }
+    long getReallyUsedMemory() {
+        long before = getGcCount();
+        System.gc();
+        while (getGcCount() == before);
+        return getCurrentlyUsedMemory();
+    }
 
     private void populateTestDB() {
         logger.info("Populating DB with testing data");

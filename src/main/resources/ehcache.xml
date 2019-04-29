@@ -1,7 +1,10 @@
 <config
 		xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
-		xmlns='http://www.ehcache.org/v3' xmlns:jsr107="http://www.ehcache.org/v3/jsr107"
-		xsi:schemaLocation="http://www.ehcache.org/v3 http://www.ehcache.org/schema/ehcache-core.xsd">
+		xmlns='http://www.ehcache.org/v3'
+		xmlns:jsr107='http://www.ehcache.org/v3/jsr107'
+		xsi:schemaLocation="
+        http://www.ehcache.org/v3 http://www.ehcache.org/schema/ehcache-core-3.0.xsd
+        http://www.ehcache.org/v3/jsr107 http://www.ehcache.org/schema/ehcache-107-ext-3.0.xsd">
 
 	<service>
 		<jsr107:defaults enable-management="true" enable-statistics="true"/>
@@ -10,7 +13,7 @@
 	<!-- file persistance enabling-->
 	<persistence directory="./cache" ></persistence>
 
-	<cache alias="EngineObjectService" >
+	<cache alias="EngineObjectService"  >
 
 		<listeners>
 			<listener>
@@ -24,13 +27,15 @@
 				<events-to-fire-on>EVICTED</events-to-fire-on>
 			</listener>
 		</listeners>
-		<resources>
 
-			<heap>10</heap>
-			<offheap unit="MB">100</offheap>
-			<disk persistent="true" unit="GB">1</disk>
+		<resources >
+
+			<heap unit="entries">10000</heap>
+			<offheap unit="MB">1500</offheap>
+			<disk persistent="true" unit="GB">10</disk>
+
 		</resources>
-
+		<!--<jsr107:mbeans enable-management="false" enable-statistics="false"/>-->
 	</cache>
 
 </config>
