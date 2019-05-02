@@ -1,0 +1,42 @@
+<config
+		xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+		xmlns='http://www.ehcache.org/v3'
+		xmlns:jsr107='http://www.ehcache.org/v3/jsr107'
+		xsi:schemaLocation="
+        http://www.ehcache.org/v3 http://www.ehcache.org/schema/ehcache-core-3.0.xsd
+        http://www.ehcache.org/v3/jsr107 http://www.ehcache.org/schema/ehcache-107-ext-3.0.xsd">
+
+	<service>
+		<jsr107:defaults enable-management="true" enable-statistics="true"/>
+	</service>
+
+	<!-- file persistance enabling-->
+	<persistence directory="./cache" ></persistence>
+
+	<cache alias="engine-object"  >
+
+		<listeners>
+			<listener>
+				<class>com.myapp.catching.service.CacheEventLogger</class>
+				<event-firing-mode>ASYNCHRONOUS</event-firing-mode>
+				<event-ordering-mode>UNORDERED</event-ordering-mode>
+				<events-to-fire-on>CREATED</events-to-fire-on>
+				<events-to-fire-on>UPDATED</events-to-fire-on>
+				<events-to-fire-on>EXPIRED</events-to-fire-on>
+				<events-to-fire-on>REMOVED</events-to-fire-on>
+				<events-to-fire-on>EVICTED</events-to-fire-on>
+			</listener>
+		</listeners>
+
+		<resources >
+
+			<heap unit="entries">1024</heap>
+			<offheap unit="MB">256</offheap>
+			<disk persistent="true" unit="GB">10</disk>
+
+		</resources>
+		<!--<jsr107:mbeans enable-management="false" enable-statistics="false"/>-->
+	</cache>
+
+</config>
+

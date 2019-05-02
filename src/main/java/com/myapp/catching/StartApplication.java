@@ -2,8 +2,10 @@ package com.myapp.catching;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.myapp.catching.jdbc.GeoWktJdbcRepository;
 import com.myapp.catching.model.EngineObject;
-import com.myapp.catching.repository.EngineObjectRepository;
+import com.myapp.catching.model.GeoWkt;
+import com.myapp.catching.repository.GeoWktRepository;
 import com.myapp.catching.service.EngineObjectService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,109 +33,136 @@ public class StartApplication implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(StartApplication.class);
 
-    @Autowired
-    private CacheManager cacheManager;
+//    @Autowired
+//    private CacheManager cacheManager;
+//
+//    @Autowired
+//    private GeoWktRepository geoWktRepository;
+//
+//    @Autowired
+//    private EngineObjectService engineObjectService;
 
-    @Autowired
-    private EngineObjectRepository engineObjectRepository;
 
-    @Autowired
-    private EngineObjectService engineObjectService;
 
     @Value("classpath:test-data.json")
     private Resource resourceFile;
 
+    public static final int maxObjects = 1000000;
+
     public static void main(String[] args) {
         SpringApplication.run(StartApplication.class, args);
     }
-    public static final Long maxObjects = 1000000L;
+
     @Override
     public void run(String... args) {
-
-        logger.info("## StartApplication Caching Example ...");
-        logger.info("## using cache manager: " + cacheManager.getClass().getName());
+        try {
+            logger.info("## StartApplication Caching Example ...");
+//            logger.info("## using cache manager: " + cacheManager.getClass().getName());
 
 //        populateTestDB();
 
-        engineObjectService.clearCache();
-        logger.info("## Initial memory KB: " + getReallyUsedMemory() / 1024d);
+//            engineObjectService.clearCache();
+            logger.info("## Initial memory KB: " + getReallyUsedMemory() / 1024d);
+//            loadEngineObjectsCache(maxObjects);
+//            hitCacheEO(maxObjects);
+//            buildTree(engineObjectService.findAll(maxObjects));
+            buildRTreeWithCache();
 
+
+//            printStats();
+//            cacheManager.close();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+//
+//    private void loadEngineObjectsCache(int totalLoad) {
+//        long startTime, stopTime;
+//
+//        startTime = System.nanoTime();
+//        List<EngineObject> objects = engineObjectService.findAll(totalLoad);
+//        stopTime = System.nanoTime();
+//
+//        logger.info("## findAll EngineObject from DB(), {} items: {} s. Memory KB {} ",
+//                objects.size(),
+//                (stopTime - startTime) * 0.000000001f,
+//                getReallyUsedMemory() / 1024d );
+//
+//        startTime = System.nanoTime();
+//        objects.forEach(x -> {
+//            cacheManager.getCache("engine-object").put(x.getObjectId(), x);
+//        });
+//        stopTime = System.nanoTime();
+//        logger.info("## Loaded objects in cache: {} s. Memory KB {} ",
+//                (stopTime - startTime) * 0.000000001f,
+//                getReallyUsedMemory() / 1024d );
+//    }
+//
+    public void buildRTreeWithCache() throws Exception{
         long startTime, stopTime;
         startTime = System.nanoTime();
-        List<EngineObject> engineObjects = engineObjectService.findAll();
+        // engineObjectService.buildRTreeWithCache(maxObjects);
         stopTime = System.nanoTime();
-
-        logger.info("## findAll from DB(): {} s. Memory KB {} ",
+        logger.info("## Build rTree and cache JDBC: {} s. Memory KB {} ",
                 (stopTime - startTime) * 0.000000001f,
                 getReallyUsedMemory() / 1024d );
 
-        Long count = maxObjects;
-        engineObjects = engineObjects.subList(0, count.intValue());
-
-        startTime = System.nanoTime();
-        engineObjects.parallelStream().forEach((x) -> {
-            cacheManager.getCache("EngineObjectService").put(x.getId(),x);
-        });
-        stopTime = System.nanoTime();
-
-        logger.info("## Loading objects in cache(): {} s. Memory KB {} ",
-                (stopTime - startTime) * 0.000000001f,
-                getReallyUsedMemory() / 1024d );
-
-//        count = 100000L;
-//        for (EngineObject eo : engineObjects) {
-//            engineObjectService.findById(eo.getId());
-//            --count;
-//            if (count == 0L) break;
-//        }
-
-
-        count = maxObjects;
-        startTime = System.nanoTime();
-        for (EngineObject eo : engineObjects) {
-            engineObjectService.findById(eo.getId());
-            --count;
-            if (count == 0L) break;
-        }
-        stopTime = System.nanoTime();
-
-        logger.info("## Loop 1: {} s. Memory KB {} ",
-                (stopTime - startTime) * 0.000000001f,
-                getReallyUsedMemory() / 1024d );
-
-        startTime = System.nanoTime();
-        for (EngineObject eo : engineObjects) {
-            engineObjectService.findById(eo.getId());
-        }
-        stopTime = System.nanoTime();
-        logger.info("## Loop 2: {} s. Memory KB {} ",
-                (stopTime - startTime) * 0.000000001f,
-                getReallyUsedMemory() / 1024d );
-
-        printStats();
-//        System.out.println("\nfindById(1L)");
-//        repository.findById(1l).ifPresent(x -> System.out.println(x));
+    }
 //
-//        System.out.println("\nfindByName('Node')");
-//        repository.findByName("Node").forEach(x -> System.out.println(x));
-        cacheManager.close();
-    }
-
-    private void printStats() {
-        for (String name : cacheManager.getCacheNames()) {
-            CacheStatisticsMXBean CacheStatBean = getCacheStatisticsMXBean(name);
-            if (CacheStatBean != null) {
-                logger.info("Cache hits #{} misses #{}", CacheStatBean.getCacheHits(), CacheStatBean.getCacheMisses());
-                logger.info("Cache hits %{} misses %{}", CacheStatBean.getCacheHitPercentage(),
-                        CacheStatBean.getCacheMissPercentage());
-                logger.info("Cache gets #{}", CacheStatBean.getCacheGets());
-                logger.info("Cache evictions #{}", CacheStatBean.getCacheEvictions());
-                logger.info("Cache average get time {} milliseconds", CacheStatBean.getAverageGetTime());
-            }
-
-        }
-    }
-
+//    public void buildTree (List<EngineObject> engineObjects) {
+//        long startTime, stopTime;
+//        startTime = System.nanoTime();
+//        engineObjectService.getRTree(engineObjects);
+//        stopTime = System.nanoTime();
+//        logger.info("## Build rTree: {} s. Memory KB {} ",
+//                (stopTime - startTime) * 0.000000001f,
+//                getReallyUsedMemory() / 1024d );
+//
+//    }
+//
+//
+//    private void hitCacheEO(int maxObjects) throws Exception{
+//
+//        long startTime;
+//        long stopTime;
+//
+//        startTime = System.nanoTime();
+//        List<EngineObject> items = engineObjectService.findAll(maxObjects);
+//        for (EngineObject e : items) {
+//            engineObjectService.findById(e.getObjectId());
+//        }
+//        stopTime = System.nanoTime();
+//
+//        logger.info("## Loop 1: {} s. Memory KB {} ",
+//                (stopTime - startTime) * 0.000000001f,
+//                getReallyUsedMemory() / 1024d );
+//
+//        startTime = System.nanoTime();
+//        for (EngineObject e : items) {
+//            engineObjectService.findById(e.getObjectId());
+//        }
+//        stopTime = System.nanoTime();
+//        logger.info("## Loop 2: {} s. Memory KB {} ",
+//                (stopTime - startTime) * 0.000000001f,
+//                getReallyUsedMemory() / 1024d );
+//    }
+//
+//    private void printStats() {
+//        for (String name : cacheManager.getCacheNames()) {
+//            CacheStatisticsMXBean CacheStatBean = getCacheStatisticsMXBean(name);
+//            if (CacheStatBean != null) {
+//                logger.info("Cache hits #{} misses #{}", CacheStatBean.getCacheHits(), CacheStatBean.getCacheMisses());
+//                logger.info("Cache hits %{} misses %{}", CacheStatBean.getCacheHitPercentage(),
+//                        CacheStatBean.getCacheMissPercentage());
+//                logger.info("Cache gets #{}", CacheStatBean.getCacheGets());
+//                logger.info("Cache evictions #{}", CacheStatBean.getCacheEvictions());
+//                logger.info("Cache average get time {} milliseconds", CacheStatBean.getAverageGetTime());
+//            }
+//
+//        }
+//    }
+//
 
     long getCurrentlyUsedMemory() {
         return
@@ -154,37 +183,39 @@ public class StartApplication implements CommandLineRunner {
         while (getGcCount() == before);
         return getCurrentlyUsedMemory();
     }
+//
+//    private void populateTestDB() {
+//        logger.info("Populating DB with testing data");
+//        long startTime = System.nanoTime();
+//
+//        ObjectMapper mapper = new ObjectMapper();
+//        try {
+//            List<GeoWkt> objJsonList = mapper.readValue(resourceFile.getFile(), new TypeReference<List<GeoWkt>>(){});
+//            objJsonList.forEach((n) -> geoWktRepository.save(n));
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        long stopTime = System.nanoTime();
+//        logger.info("loading time: " + (stopTime - startTime) + " ns" );
+//    }
+//
+//    public static CacheStatisticsMXBean getCacheStatisticsMXBean(final String cacheName) {
+//        final MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
+//        ObjectName name = null;
+//        try {
+//            name = new ObjectName("*:type=CacheStatistics,*,Cache=" + cacheName);
+//        } catch (MalformedObjectNameException ex) {
+//            logger.error("Someting wrong with ObjectName {}", ex);
+//        }
+//        Set<ObjectName> beans = mbeanServer.queryNames(name, null);
+//        if (beans.isEmpty()) {
+//            logger.debug("Cache Statistics Bean not found");
+//            return null;
+//        }
+//        ObjectName[] objArray = beans.toArray(new ObjectName[beans.size()]);
+//        return JMX.newMBeanProxy(mbeanServer, objArray[0], CacheStatisticsMXBean.class);
+//    }
+//
 
-    private void populateTestDB() {
-        logger.info("Populating DB with testing data");
-        long startTime = System.nanoTime();
-
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            List<EngineObject> objJsonList = mapper.readValue(resourceFile.getFile(), new TypeReference<List<EngineObject>>(){});
-            objJsonList.forEach((n) -> engineObjectRepository.save(n));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        long stopTime = System.nanoTime();
-        logger.info("loading time: " + (stopTime - startTime) + " ns" );
-    }
-
-    public static CacheStatisticsMXBean getCacheStatisticsMXBean(final String cacheName) {
-        final MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
-        ObjectName name = null;
-        try {
-            name = new ObjectName("*:type=CacheStatistics,*,Cache=" + cacheName);
-        } catch (MalformedObjectNameException ex) {
-            logger.error("Someting wrong with ObjectName {}", ex);
-        }
-        Set<ObjectName> beans = mbeanServer.queryNames(name, null);
-        if (beans.isEmpty()) {
-            logger.debug("Cache Statistics Bean not found");
-            return null;
-        }
-        ObjectName[] objArray = beans.toArray(new ObjectName[beans.size()]);
-        return JMX.newMBeanProxy(mbeanServer, objArray[0], CacheStatisticsMXBean.class);
-    }
 }
