@@ -2,8 +2,9 @@ version: '3.5'
 
 services:
   postgres:
-    image: postgres:9.5
-    container_name: postgres_container
+    build: ./postgis
+    image: postgres_postgis
+    container_name: postgis_container
     ports:
       - 15432:5432/tcp
     networks:
@@ -13,9 +14,25 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-#      PGDATA: /data/postgres
-#    restart: always
+    #      PGDATA: /data/postgres
+    #    restart: always
     restart: unless-stopped
+
+#  postgres:
+#    image: kartoza/postgis:9.5-2.3
+#    container_name: postgres_container
+#    ports:
+#      - 15432:5432/tcp
+#    networks:
+#      - postgres
+#    volumes:
+#      - database_data:/var/lib/postgresql/data
+#    environment:
+#      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+#      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+##      PGDATA: /data/postgres
+##    restart: always
+#    restart: unless-stopped
 
 
   pgadmin:
